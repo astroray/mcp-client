@@ -1,0 +1,43 @@
+{
+  "name": "mcp-client",
+  "private": true,
+  "version": "0.0.0",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build && electron-builder",
+    "preview": "vite preview",
+    "electron:dev": "vite --mode development",
+    "electron:build": "vue-tsc -b && vite build && electron-builder",
+    "electron:preview": "electron ."
+  },
+  "build": {
+    "win": {
+      "target": "portable",
+      "signAndEditExecutable": false
+    },
+    "directories": {
+      "output": "release"
+    }
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@modelcontextprotocol/sdk": "^1.8.0",
+    "dotenv": "^16.4.7",
+    "markdown-it": "^14.1.0",
+    "replicate": "^1.0.1",
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@types/markdown-it": "^14.1.2",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "@vue/tsconfig": "^0.7.0",
+    "electron": "^35.1.2",
+    "electron-builder": "^26.0.12",
+    "typescript": "~5.7.2",
+    "vite": "^6.2.0",
+    "vite-plugin-electron": "^0.29.0",
+    "vite-plugin-electron-renderer": "^0.14.6",
+    "vue-tsc": "^2.2.4"
+  }
+}

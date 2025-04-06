@@ -1,26 +1,64 @@
 <template>
-  <div class="tool-execution-card" :class="{ 'is-executing': isExecuting }">
-    <div class="card-header" @click="toggleExpanded">
+  <div
+    class="tool-execution-card"
+    :class="{ 'is-executing': isExecuting }"
+  >
+    <div
+      class="card-header"
+      @click="toggleExpanded"
+    >
       <div class="tool-info">
         <div class="tool-status">
-          <span v-if="isExecuting" class="executing-icon">⚡</span>
-          <span v-else-if="hasError" class="error-icon">❌</span>
-          <span v-else class="success-icon">✓</span>
+          <span
+            v-if="isExecuting"
+            class="executing-icon"
+          >⚡</span>
+          <span
+            v-else-if="hasError"
+            class="error-icon"
+          >❌</span>
+          <span
+            v-else
+            class="success-icon"
+          >✓</span>
         </div>
-        <div class="tool-name">{{ toolName }}</div>
+        <div class="tool-name">
+          {{ toolName }}
+        </div>
       </div>
       <button class="expand-button">
         {{ isExpanded ? '▼' : '▶' }}
       </button>
     </div>
-    <div v-if="isExpanded" class="tool-content">
-      <div class="section-label">입력 매개변수:</div>
-      <div v-if="parsedInput" class="json-viewer">
-        <vue-json-pretty :data="parsedInput" :deep="2" :show-double-quotes="true" :show-length="true"
-          :show-line="false" />
+    <div
+      v-if="isExpanded"
+      class="tool-content"
+    >
+      <div class="section-label">
+        입력 매개변수:
       </div>
-      <div v-else class="empty-input">없음</div>
-      <div v-if="hasError" class="error-section">
+      <div
+        v-if="parsedInput"
+        class="json-viewer"
+      >
+        <vue-json-pretty
+          :data="parsedInput"
+          :deep="2"
+          :show-double-quotes="true"
+          :show-length="true"
+          :show-line="false"
+        />
+      </div>
+      <div
+        v-else
+        class="empty-input"
+      >
+        없음
+      </div>
+      <div
+        v-if="hasError"
+        class="error-section"
+      >
         <div class="section-header error">
           <span class="error-icon">❌</span>
           실행 오류 발생
@@ -29,14 +67,27 @@
           {{ errorMessage }}
         </div>
       </div>
-      <div v-else class="result-section">
-        <div class="section-label">실행 결과:</div>
-        <div v-if="content" class="json-viewer">
+      <div
+        v-else
+        class="result-section"
+      >
+        <div class="section-label">
+          실행 결과:
+        </div>
+        <div
+          v-if="content"
+          class="json-viewer"
+        >
           <div class="result-details">
             {{ content }}
           </div>
         </div>
-        <div v-else class="empty-input">없음</div>
+        <div
+          v-else
+          class="empty-input"
+        >
+          없음
+        </div>
       </div>
     </div>
   </div>

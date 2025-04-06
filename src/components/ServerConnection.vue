@@ -3,16 +3,30 @@
     <div class="servers-list">
       <h3>Connected Servers</h3>
       <div class="server-items">
-        <div v-for="(status, serverName) in serverStatus" :key="serverName" class="server-item">
+        <div
+          v-for="(status, serverName) in serverStatus"
+          :key="serverName"
+          class="server-item"
+        >
           <div class="server-header">
             <div class="status-badge">
-              <span class="status-dot" :class="{ 'connected': status.connected }"></span>
+              <span
+                class="status-dot"
+                :class="{ 'connected': status.connected }"
+              />
               {{ serverName }}
             </div>
           </div>
-          <div v-if="status.connected" class="tools-list">
+          <div
+            v-if="status.connected"
+            class="tools-list"
+          >
             <div class="tools-grid">
-              <div v-for="tool in status.tools" :key="tool" class="tool-item">
+              <div
+                v-for="tool in status.tools"
+                :key="tool"
+                class="tool-item"
+              >
                 {{ tool }}
               </div>
             </div>
@@ -20,7 +34,12 @@
         </div>
       </div>
     </div>
-    <div v-if="error" class="error">{{ error }}</div>
+    <div
+      v-if="error"
+      class="error"
+    >
+      {{ error }}
+    </div>
   </div>
 </template>
 

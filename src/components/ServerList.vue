@@ -1,29 +1,62 @@
 <template>
   <div class="server-list">
     <div class="header">
-      <div class="header-title">MCP Servers</div>
+      <div class="header-title">
+        MCP Servers
+      </div>
     </div>
-    <div v-for="server in servers" :key="server.name" class="server-card" :class="{ 'is-connected': server.connected }">
-      <div class="server-header" @click="toggleServer(server.name)">
+    <div
+      v-for="server in servers"
+      :key="server.name"
+      class="server-card"
+      :class="{ 'is-connected': server.connected }"
+    >
+      <div
+        class="server-header"
+        @click="toggleServer(server.name)"
+      >
         <div class="server-info">
           <div class="server-status">
-            <span v-if="server.connected" class="connected-icon">●</span>
-            <span v-else class="disconnected-icon">○</span>
+            <span
+              v-if="server.connected"
+              class="connected-icon"
+            >●</span>
+            <span
+              v-else
+              class="disconnected-icon"
+            >○</span>
           </div>
-          <div class="server-name">{{ server.name }}</div>
+          <div class="server-name">
+            {{ server.name }}
+          </div>
         </div>
         <button class="expand-button">
           {{ expandedServers.includes(server.name) ? '▼' : '▶' }}
         </button>
       </div>
-      <div v-if="expandedServers.includes(server.name)" class="server-content">
+      <div
+        v-if="expandedServers.includes(server.name)"
+        class="server-content"
+      >
         <div class="tools-list">
-          <div class="tools-header">사용 가능한 도구</div>
-          <div v-if="server.tools.length === 0" class="no-tools">
+          <div class="tools-header">
+            사용 가능한 도구
+          </div>
+          <div
+            v-if="server.tools.length === 0"
+            class="no-tools"
+          >
             사용 가능한 도구가 없습니다.
           </div>
-          <div v-else class="tool-items">
-            <div v-for="tool in server.tools" :key="tool" class="tool-item">
+          <div
+            v-else
+            class="tool-items"
+          >
+            <div
+              v-for="tool in server.tools"
+              :key="tool"
+              class="tool-item"
+            >
               {{ tool }}
             </div>
           </div>

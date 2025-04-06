@@ -1,3 +1,4 @@
+import { Tool } from "@anthropic-ai/sdk/resources/messages/messages.mjs";
 import { QueryContext, StreamResponse } from "./index";
 
 export interface MCPModel {
@@ -11,8 +12,8 @@ export interface MCPModelProvider {
     getAvailableModels(): MCPModel[];
     setModel(modelId: string): void;
     getCurrentModel(): string | null;
-    getTools(): any[];
-    setTools(tools: any[]): Promise<void>;
+    getTools(): Tool[];
+    setTools(tools: Tool[]): Promise<void>;
     startQuery(context: QueryContext): AsyncGenerator<StreamResponse>;
     stopQuery(): void;
     cleanup(): Promise<void>;

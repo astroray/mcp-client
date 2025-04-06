@@ -6,7 +6,6 @@ import { MCPClient } from './mcp-client'
 
 const distDir = path.join(__dirname, '..')
 console.log(distDir);
-const publicDir = app.isPackaged ? distDir : path.join(distDir, '../public')
 
 let win: BrowserWindow | null = null
 const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL

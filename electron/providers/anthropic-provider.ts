@@ -118,7 +118,7 @@ export class AnthropicModelProvider implements MCPModelProvider {
                 throw new Error('AbortController is not initialized');
             }
 
-            let responses: StreamResponse[] = [];
+            const responses: StreamResponse[] = [];
 
             const messages: Array<MessageParam> = context.messages.map(message => {
                 try {

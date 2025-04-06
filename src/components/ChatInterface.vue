@@ -1,30 +1,56 @@
 <template>
   <div class="chat-container">
-    <div class="messages" ref="messagesContainer">
-      <template v-for="(message, index) in messages" :key="index">
-        <ChatMessage v-if="message.isUser || (!message.isToolExecution && !message.isUser)" :content="message.content"
-          :is-user="message.isUser" :is-streaming="message.isStreaming" />
-        <ToolExecutionCard v-else-if="message.isToolExecution" :toolName="message.toolName || ''"
-          :content="message.content || ''" :isExecuting="message.isExecuting || false"
-          :hasError="message.hasError || false" :errorMessage="message.errorMessage || ''"
-          :inputJson="message.inputJson || ''" />
+    <div
+      ref="messagesContainer"
+      class="messages"
+    >
+      <template
+        v-for="(message, index) in messages"
+        :key="index"
+      >
+        <ChatMessage
+          v-if="message.isUser || (!message.isToolExecution && !message.isUser)"
+          :content="message.content"
+          :is-user="message.isUser"
+          :is-streaming="message.isStreaming"
+        />
+        <ToolExecutionCard
+          v-else-if="message.isToolExecution"
+          :tool-name="message.toolName || ''"
+          :content="message.content || ''"
+          :is-executing="message.isExecuting || false"
+          :has-error="message.hasError || false"
+          :error-message="message.errorMessage || ''"
+          :input-json="message.inputJson || ''"
+        />
       </template>
     </div>
     <div class="input-wrapper">
       <div class="model-controls">
         <div class="control-group">
-          <ModelSelector @modelChange="handleModelChange" />
+          <ModelSelector @model-change="handleModelChange" />
         </div>
-        <div class="connection-status" v-if="!isConnected">
+        <div
+          v-if="!isConnected"
+          class="connection-status"
+        >
           <span class="warning-icon">⚠️</span>
           No servers connected - some tools may be unavailable
         </div>
       </div>
       <div class="input-container">
-        <textarea v-model="currentMessage" :disabled="isProcessing" placeholder="메시지를 입력하세요..." rows="4"
-          @keydown.enter.prevent="sendMessage(currentMessage)" />
-        <button @click="isProcessing ? stopProcessing() : sendMessage()"
-          :disabled="!isProcessing && !currentMessage.trim()" :class="['send-button', { 'stop-button': isProcessing }]">
+        <textarea
+          v-model="currentMessage"
+          :disabled="isProcessing"
+          placeholder="메시지를 입력하세요..."
+          rows="4"
+          @keydown.enter.prevent="sendMessage(currentMessage)"
+        />
+        <button
+          :disabled="!isProcessing && !currentMessage.trim()"
+          :class="['send-button', { 'stop-button': isProcessing }]"
+          @click="isProcessing ? stopProcessing() : sendMessage()"
+        >
           {{ isProcessing ? 'Stop' : 'Send' }}
         </button>
       </div>

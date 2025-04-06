@@ -1,5 +1,5 @@
 <template>
-  <div 
+  <div
     class="message"
     :class="{
       'message-user': isUser,
@@ -8,11 +8,18 @@
     }"
   >
     <div class="message-content">
-      <div v-if="!typing" v-html="formattedContent"></div>
-      <div v-else class="typing-indicator">
-        <div class="typing-dot"></div>
-        <div class="typing-dot"></div>
-        <div class="typing-dot"></div>
+      <!-- eslint-disable-next-line vue/no-v-html -->
+      <div
+        v-if="!typing"
+        v-dompurify-html="formattedContent"
+      />
+      <div
+        v-else
+        class="typing-indicator"
+      >
+        <div class="typing-dot" />
+        <div class="typing-dot" />
+        <div class="typing-dot" />
       </div>
     </div>
   </div>
@@ -46,7 +53,7 @@ const formattedContent = computed(() => {
     return line
   })
   const content = formattedLines.join('\n')
-  
+
   // Parse markdown
   return md.render(content)
 })
@@ -234,12 +241,12 @@ const formattedContent = computed(() => {
   position: relative;
 }
 
-.message-content :deep(li) > p {
+.message-content :deep(li)>p {
   margin: 0;
 }
 
-.message-content :deep(li) > ul,
-.message-content :deep(li) > ol {
+.message-content :deep(li)>ul,
+.message-content :deep(li)>ol {
   margin-top: 2px;
   margin-bottom: 2px;
   margin-left: 0;
@@ -250,11 +257,11 @@ const formattedContent = computed(() => {
   list-style: none;
 }
 
-.message-content :deep(ul) > li {
+.message-content :deep(ul)>li {
   padding-left: 16px;
 }
 
-.message-content :deep(ul) > li::before {
+.message-content :deep(ul)>li::before {
   content: "•";
   position: absolute;
   left: 0;
@@ -278,12 +285,12 @@ const formattedContent = computed(() => {
   list-style: none;
 }
 
-.message-content :deep(ol) > li {
+.message-content :deep(ol)>li {
   counter-increment: item;
   padding-left: 16px;
 }
 
-.message-content :deep(ol) > li::before {
+.message-content :deep(ol)>li::before {
   content: counter(item) ".";
   position: absolute;
   left: 0;
@@ -352,9 +359,13 @@ const formattedContent = computed(() => {
 }
 
 @keyframes typingBounce {
-  0%, 60%, 100% {
+
+  0%,
+  60%,
+  100% {
     transform: translateY(0);
   }
+
   30% {
     transform: translateY(-4px);
   }

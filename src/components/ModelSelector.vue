@@ -3,12 +3,17 @@
     <span class="model-label">Model:</span>
     <div class="select-wrapper">
       <select 
-        class="model-select" 
-        v-model="selectedModel"
-        @change="handleModelChange"
+        v-model="selectedModel" 
+        class="model-select"
         :disabled="loading"
+        @change="handleModelChange"
       >
-        <option value="" disabled>{{ loading ? 'Loading models...' : 'Select a model' }}</option>
+        <option
+          value=""
+          disabled
+        >
+          {{ loading ? 'Loading models...' : 'Select a model' }}
+        </option>
         <option 
           v-for="model in models" 
           :key="model.id" 

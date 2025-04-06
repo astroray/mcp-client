@@ -31,6 +31,7 @@ export class MCPClient {
       this.appSettings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8')) as AppSettings;
       logger.info('Server settings loaded');
     } catch (error) {
+      logger.error('Failed to load server settings', { error });
       logger.warn('Creating default server settings file');
       this.appSettings = {
         modelProvider: {
@@ -196,7 +197,7 @@ export class MCPClient {
     };
   }
 
-  async *startQuery(query: string, options?: QueryOptions): AsyncGenerator<QueryResponse> {
+  async *startQuery(query: string): AsyncGenerator<QueryResponse> {
     // this.resetContext(options);
     this.context.messages.push({ type: 'text', content: query });
 

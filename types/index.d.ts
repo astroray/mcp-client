@@ -49,7 +49,7 @@ export interface ToolUseResponse {
     content: {
         id: string;
         name: string;
-        args: any;
+        args: Record<string, unknown> | undefined;
     },
     inputString: string;
 }

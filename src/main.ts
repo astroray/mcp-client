@@ -1,5 +1,8 @@
 import { createApp } from 'vue'
-import './style.css'
+import VueDOMPurifyHTML from 'vue-dompurify-html'
 import App from './App.vue'
+import './style.css'
 
-createApp(App).mount('#app')
+const app = createApp(App)
+app.use(VueDOMPurifyHTML)
+app.mount('#app')

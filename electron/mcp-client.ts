@@ -3,6 +3,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import * as fs from 'fs';
 import * as path from 'path';
+import { version } from '../package.json';
 import { QueryContext, QueryOptions, ServerConnection, ToolUseResponse } from "../types";
 import { QueryResponse, ToolErrorQueryResponse, ToolResultQueryResponse } from "../types/bridge";
 import { MCPModelProvider } from "../types/model-provider";
@@ -68,8 +69,8 @@ export class MCPClient {
       });
 
       const client = new Client({
-        name: `mcp-client-electron-${serverName}`,
-        version: "1.0.0"
+        name: `mcp-client-${serverName}`,
+        version: version
       });
 
       const connection: ServerConnection = {

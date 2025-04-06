@@ -2,7 +2,7 @@
   "name": "mcp-client",
   "author": "astroray",
   "license": "MIT",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "A desktop application for the Model Context Protocol",
   "main": "dist-electron/main.js",
   "scripts": {

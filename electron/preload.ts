@@ -1,8 +1,13 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import { version } from '../package.json';
 import { QueryRequest, QueryResponse } from '../types/bridge';
+
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('electronAPI', {
+  // Version info
+  getVersion: () => version,
+
   // Model management
   getAvailableModels: () => ipcRenderer.invoke('mcp:get-models'),
   setModel: (modelId: string) => ipcRenderer.invoke('mcp:set-model', modelId),

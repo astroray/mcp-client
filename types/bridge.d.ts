@@ -34,6 +34,9 @@ export interface ModelInfo {
 }
 
 export interface ElectronAPI {
+  // Version info
+  getVersion: () => string;
+
   // Model management
   getAvailableModels: () => Promise<{ success: boolean; models?: ModelInfo[]; error?: string }>;
   setModel: (modelId: string) => Promise<{ success: boolean; error?: string }>;

@@ -23,6 +23,32 @@ npm run electron:dev
 npm run electron:build
 ```
 
+## Configuration
+
+Create a `settings.json` file in the root directory:
+
+```json
+{
+  "modelProvider": {
+    "apiKey": "<ANTHROPIC_API_KEY>"
+  },
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "C:\\Users\\<YOUR_USERNAME>\\Downloads"
+      ]
+    }
+  }
+}
+```
+
+The configuration file specifies:
+- Model provider settings (e.g., Anthropic API key)
+- MCP server configurations for various capabilities (e.g., filesystem access)
+
 ## Tech Stack
 
 - Electron for desktop runtime

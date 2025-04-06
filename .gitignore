@@ -43,4 +43,5 @@ release
 Thumbs.db
 
 # Development
-server-settings.json
+settings.json
+references

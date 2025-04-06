@@ -8,15 +8,29 @@ import renderer from 'vite-plugin-electron-renderer'
 export default defineConfig({
   plugins: [
     vue(),
-    electron([{
-      entry: 'electron/main.ts',
-    },
-    {
-      entry: 'electron/preload.ts',
-      onstart(options) {
-        options.reload()
+    electron([
+      {
+        entry: 'electron/main.ts',
+        vite: {
+          build: {
+            outDir: 'dist-electron',
+            rollupOptions: {
+              external: ['electron']
+            }
+          }
+        }
+      },
+      {
+        entry: 'electron/preload.ts',
+        vite: {
+          build: {
+            outDir: 'dist-electron'
+          }
+        },
+        onstart(options) {
+          options.reload()
+        }
       }
-    }
     ]),
     renderer(),
   ],
@@ -26,6 +40,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: 'dist'
+    outDir: 'dist',
+    emptyOutDir: true
   }
 })

@@ -4,11 +4,14 @@ import { QueryRequest } from '../types/bridge'
 import logger from './logger'
 import { MCPClient } from './mcp-client'
 
-const distDir = path.join(__dirname, '..')
-console.log(distDir);
+// 개발 모드에서는 VITE_DEV_SERVER_URL을 사용하고,
+// 프로덕션 모드에서는 dist 디렉토리의 index.html을 사용
+const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL
+const distPath = app.isPackaged
+  ? path.join(process.resourcesPath, 'dist')
+  : path.join(__dirname, '..', 'dist')
 
 let win: BrowserWindow | null = null
-const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL
 
 // Initialize MCP client
 const mcpClient = new MCPClient()
@@ -83,7 +86,7 @@ async function createWindow() {
   if (VITE_DEV_SERVER_URL) {
     await win.loadURL(VITE_DEV_SERVER_URL)
   } else {
-    await win.loadFile(path.join(distDir || '', 'index.html'))
+    await win.loadFile(path.join(distPath, 'index.html'))
   }
 
   // 윈도우가 준비된 후 초기화 시작

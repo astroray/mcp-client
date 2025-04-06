@@ -1,11 +1,14 @@
 {
-  "name": "electron-node-app",
-  "private": true,
-  "version": "0.0.0",
+  "name": "mcp-client",
+  "author": "astroray",
+  "license": "MIT",
+  "version": "1.0.0",
+  "description": "A desktop application for the Model Context Protocol",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite --mode development",
     "start": "electron .",
+    "prebuild": "rm -rf release && rm -rf dist-electron && rm -rf dist",
     "build": "vue-tsc -b && vite build && electron-builder",
     "lint": "eslint --config eslint.config.mjs --fix --ext .vue,.ts",
     "type-check": "vue-tsc --noEmit",
@@ -17,8 +20,22 @@
       "signAndEditExecutable": false
     },
     "directories": {
-      "output": "release"
-    }
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "dist",
+        "to": "dist",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ]
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

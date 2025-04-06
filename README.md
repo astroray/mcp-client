@@ -1,5 +1,10 @@
 # MCP Client
 
+[![CI](https://github.com/astroray/mcp-client/actions/workflows/ci.yml/badge.svg)](https://github.com/astroray/mcp-client/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js Version](https://img.shields.io/badge/node-22.x-brightgreen)](https://nodejs.org)
+[![Version](https://img.shields.io/github/v/release/astroray/mcp-client)](https://github.com/astroray/mcp-client/releases)
+
 Desktop application for AI model interactions using the Model Context Protocol (MCP). Built with Electron and Vue 3.
 
 ## Features
@@ -58,5 +63,5 @@ The configuration file specifies:
 
 ## Requirements
 
-- Node.js ≥ 14
+- Node.js ≥ 22
 - npm or yarn

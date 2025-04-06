@@ -1,191 +1,62 @@
-import { Anthropic } from "@anthropic-ai/sdk";
 import { Tool } from "@anthropic-ai/sdk/resources/messages/messages.mjs";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as util from 'util';
-import { ModelInfo } from '../src/types/electron';
-import { MCPServerSettings, ServerConfig } from '../src/types/server-settings';
+import { QueryContext, QueryOptions, ServerConnection, ToolUseResponse } from "../types";
+import { QueryResponse, ToolErrorQueryResponse, ToolResultQueryResponse } from "../types/bridge";
+import { MCPModelProvider } from "../types/model-provider";
+import { AppSettings, ServerSettings } from "../types/settings";
+import logger from './logger';
+import { AnthropicModelProvider } from './providers/anthropic-provider';
 
-interface ServerConnection {
-  name: string;
-  transport: StdioClientTransport;
-  client: Client;
-  tools: Tool[];
-}
-
-interface StreamMessage {
-  role: "user";
-  content: string;
-}
-
-interface ToolCall {
-  name: string;
-  args: any;
-  jsonInput: string;
-}
-
-const DEFAULT_MODEL_NAME = 'Claude 3.5 Haiku';
-
-// Define log levels with their corresponding emojis
-const LogLevel = {
-  INFO: '📝',
-  SUCCESS: '✅',
-  ERROR: '❌',
-  WARN: '⚠️',
-  DEBUG: '🔍',
-  TOOL: '🛠️',
-  NETWORK: '🌐',
-  DATA: '📦'
-} as const;
-
-dotenv.config();
+const settingsPath = path.join(process.cwd(), 'settings.json');
 
 export class MCPClient {
-  private anthropic: Anthropic;
-  private serverSettings: MCPServerSettings;
-  private currentModel: string | null = null;
-  private availableModels: ModelInfo[] = [];
+  private provider: MCPModelProvider;
+  private appSettings: AppSettings;
   private serverConnections: Map<string, ServerConnection> = new Map();
+  private mcpTools: Tool[] = [];
+  private context: QueryContext;
 
   constructor() {
     this.loadServerSettings();
-
-    const apiKey = this.serverSettings.modelProvider.apiKey;
-    if (!apiKey) {
-      throw new Error("modelProvider.apiKey is not set in environment variables");
-    }
-
-    this.anthropic = new Anthropic({
-      apiKey: apiKey,
-    });
-  }
-
-  private log(level: keyof typeof LogLevel, message: string, ...args: any[]): void {
-    const timestamp = new Date().toLocaleString('en-US', {
-      hour12: false,
-      timeZoneName: 'short'
-    });
-
-    const emoji = LogLevel[level];
-    const formattedArgs = args.map(arg =>
-      typeof arg === 'object' ?
-        util.inspect(arg, {
-          depth: null,
-          colors: true,
-          maxArrayLength: null,
-          breakLength: 120,
-          compact: true
-        }) :
-        arg
-    );
-
-    console.log(`[${timestamp}] ${emoji} ${message}`, ...formattedArgs);
-  }
-
-  private logError(message: string, error: any): void {
-    const timestamp = new Date().toLocaleString('en-US', {
-      hour12: false,
-      timeZoneName: 'short'
-    });
-
-    const stack = error instanceof Error ?
-      error.stack :
-      util.inspect(error, {
-        depth: null,
-        colors: true,
-        breakLength: 120,
-        compact: true
-      });
-
-    console.error(`[${timestamp}] ${LogLevel.ERROR} ${message}:`, stack);
+    this.provider = new AnthropicModelProvider();
+    this.resetContext();
+    logger.info('MCPClient initialized');
   }
 
   private loadServerSettings(): void {
-    const settingsPath = path.join(process.cwd(), 'server-settings.json');
-
     try {
-      this.serverSettings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8')) as MCPServerSettings;
-      this.log('INFO', 'Server settings loaded:', this.serverSettings);
+      this.appSettings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8')) as AppSettings;
+      logger.info('Server settings loaded');
     } catch (error) {
-      this.log('WARN', 'Creating default server settings file');
-      // Create default settings file
-      const defaultSettings: MCPServerSettings = {
+      logger.warn('Creating default server settings file');
+      this.appSettings = {
         modelProvider: {
-          apiKey: ""
+          apiKey: ''
         },
         mcpServers: {}
       };
-      this.serverSettings = defaultSettings;
 
       try {
-        fs.writeFileSync(settingsPath, JSON.stringify(defaultSettings, null, 2));
-        this.log('SUCCESS', 'Created default server settings at:', settingsPath);
+        fs.writeFileSync(settingsPath, JSON.stringify(this.appSettings, null, 2));
+        logger.info('Created default server settings');
       } catch (writeError) {
-        this.logError('Failed to create default server settings file', writeError);
+        logger.error('Failed to create default server settings file', { error: writeError });
       }
     }
   }
 
-  async initialize(): Promise<{ name: string, tools: string[] }[]> {
-    this.log('INFO', 'Initializing MCPClient...');
-    const results: { name: string, tools: string[] }[] = [];
-
-    this.log('DEBUG', 'Available servers:', Object.keys(this.serverSettings.mcpServers));
-    for (const [serverName, config] of Object.entries(this.serverSettings.mcpServers)) {
-      this.log('INFO', `Attempting to connect to server: ${serverName}`);
-      try {
-        const tools = await this.connectToServer(serverName, config);
-        this.log('SUCCESS', `Connected to ${serverName} with tools:`, tools);
-        results.push({ name: serverName, tools });
-      } catch (error) {
-        this.logError(`Failed to connect to server ${serverName}`, error);
-      }
-    }
-
-    await this.loadModels();
-    return results;
-  }
-
-  async loadModels(): Promise<ModelInfo[]> {
-    try {
-      const models = await this.anthropic.models.list({
-        limit: 20,
-      });
-
-      this.availableModels = models.data.map(model => ({
-        id: model.id,
-        name: model.display_name || model.id,
-        description: model.id,
-      }));
-
-      const defaultModel = this.availableModels.find(m => m.name === DEFAULT_MODEL_NAME) ||
-        this.availableModels[0];
-
-      if (defaultModel) {
-        this.currentModel = defaultModel.id;
-        this.log('SUCCESS', 'Set default model to:', defaultModel.name);
-      }
-
-      this.log('INFO', 'Available models:', this.availableModels);
-      return this.availableModels;
-    } catch (error) {
-      this.logError('Failed to load models', error);
-      throw error;
-    }
-  }
-
-  private async connectToServer(serverName: string, config: ServerConfig): Promise<string[]> {
-    this.log('NETWORK', `Connecting to server ${serverName}...`);
+  private async connectToServer(serverName: string, config: ServerSettings): Promise<string[]> {
+    logger.info(`Connecting to server ${serverName}...`);
 
     try {
       if (config.env?.MEMORY_FILE_PATH) {
         const memoryDir = path.dirname(config.env.MEMORY_FILE_PATH);
         if (!fs.existsSync(memoryDir)) {
           fs.mkdirSync(memoryDir, { recursive: true });
-          this.log('INFO', `Created memory directory: ${memoryDir}`);
+          logger.info(`Created memory directory: ${memoryDir}`);
         }
       }
 
@@ -207,7 +78,7 @@ export class MCPClient {
         tools: []
       };
 
-      this.log('NETWORK', `Initializing connection to ${serverName}`);
+      logger.info(`Initializing connection to ${serverName}`);
       connection.client.connect(transport);
 
       const toolsResult = await connection.client.listTools();
@@ -218,38 +89,65 @@ export class MCPClient {
       }));
 
       this.serverConnections.set(serverName, connection);
-      this.log('SUCCESS', `Connected to ${serverName} with ${connection.tools.length} tools`);
+      logger.info(`Connected to ${serverName} with ${connection.tools.length} tools`);
 
       return connection.tools.map(tool => tool.name);
     } catch (error) {
-      this.logError(`Failed to connect to server ${serverName}`, error);
+      logger.error(`Failed to connect to server ${serverName}`, { error });
       this.serverConnections.delete(serverName);
       throw error;
     }
   }
 
-  getAvailableModels(): ModelInfo[] {
-    return this.availableModels;
-  }
-
-  setModel(model: string): void {
-    if (!this.availableModels.some(m => m.id === model)) {
-      throw new Error(`Invalid model: ${model}`);
+  private async updateMCPTools(): Promise<void> {
+    this.mcpTools = [];
+    for (const connection of this.serverConnections.values()) {
+      this.mcpTools.push(...connection.tools);
     }
-    this.currentModel = model;
-    this.log('INFO', 'Model set to:', model);
+    // ModelProvider에 MCP 도구들 전달
+    await this.provider.setTools(this.mcpTools);
   }
 
-  getCurrentModel(): string {
-    if (!this.currentModel || !this.availableModels.some(m => m.id === this.currentModel)) {
-      const defaultModel = this.availableModels.find(m => m.name === DEFAULT_MODEL_NAME) ||
-        this.availableModels[0];
-      if (!defaultModel) {
-        throw new Error('No models available');
+  async initialize(): Promise<Array<{ name: string; tools: string[] }>> {
+    logger.info('Initializing MCP client...');
+
+    try {
+      const results: Array<{ name: string; tools: string[] }> = [];
+
+      // MCP 서버 연결
+      for (const [serverName, config] of Object.entries(this.appSettings.mcpServers)) {
+        try {
+          const tools = await this.connectToServer(serverName, config);
+          results.push({ name: serverName, tools });
+        } catch (error) {
+          logger.error(`Failed to connect to server ${serverName}`, { error });
+        }
       }
-      this.currentModel = defaultModel.id;
+
+      // MCP 도구들 업데이트
+      await this.updateMCPTools();
+
+      // 모델 제공자 초기화
+      await this.provider.initialize(this.appSettings.modelProvider.apiKey);
+
+      logger.info('MCP client initialized successfully');
+      return results;
+    } catch (error) {
+      logger.error('Failed to initialize MCP client', { error });
+      throw error;
     }
-    return this.currentModel;
+  }
+
+  getAvailableModels() {
+    return this.provider.getAvailableModels();
+  }
+
+  setModel(modelId: string): void {
+    this.provider.setModel(modelId);
+  }
+
+  getCurrentModel(): string | null {
+    return this.provider.getCurrentModel();
   }
 
   getAvailableServers(): string[] {
@@ -257,143 +155,162 @@ export class MCPClient {
   }
 
   getServerTools(serverName: string): string[] | null {
-    const connection = this.serverConnections.get(serverName);
-    if (!connection) return null;
-    return connection.tools.map(tool => tool.name);
+    return this.serverConnections.get(serverName)?.tools.map(t => t.name) || null;
   }
 
-  private getAppropriateServer(tool: string): ServerConnection | null {
-    for (const connection of this.serverConnections.values()) {
-      if (connection.tools.some(t => t.name === tool)) {
-        return connection;
-      }
-    }
-    return null;
+  getAllTools(): Tool[] {
+    return this.mcpTools;
   }
 
-  private async processJsonDelta(toolCall: ToolCall, delta: any): Promise<void> {
-    if (delta?.type === 'input_json_delta' && delta.partial_json !== undefined) {
-      toolCall.jsonInput += delta.partial_json;
-      this.log('DATA', 'Accumulated JSON input:', toolCall.jsonInput);
-    }
-  }
-
-  private async executeToolCall(toolCall: ToolCall): Promise<string | null> {
+  private async executeToolCall(name: string, args: any): Promise<any> {
     try {
-      const server = this.getAppropriateServer(toolCall.name);
-      if (!server) {
-        throw new Error(`No server found that provides tool: ${toolCall.name}`);
+      logger.info(`Executing tool ${name} with args: ${JSON.stringify(args)}`);
+      const serverConnection = Array.from(this.serverConnections.values()).find(
+        connection => connection.tools.some(tool => tool.name === name)
+      );
+
+      if (!serverConnection) {
+        throw new Error(`No server found that provides tool: ${name}`);
       }
 
-      this.log('TOOL', `Executing ${toolCall.name} with args:`, toolCall.args);
-      const result = await server.client.callTool({
-        name: toolCall.name,
-        arguments: toolCall.args,
+      const result = await serverConnection.client.callTool({
+        name: name,
+        arguments: args,
       });
 
-      this.log('SUCCESS', `Tool ${toolCall.name} executed successfully:`, result);
-      return result.content as string;
+      logger.info(`Tool ${name} executed successfully: ${JSON.stringify(result, null, 2)}`);
+      return result;
     } catch (error) {
-      this.logError(`Error executing tool ${toolCall.name}`, error);
+      logger.error(`Error executing tool ${name}`, { error });
       throw error;
     }
   }
 
-  private async *handleToolCall(toolCall: ToolCall, messages: StreamMessage[]): AsyncGenerator<string> {
-    try {
-      yield `\n[Calling tool ${toolCall.name}...]\n`;
-
-      const result = await this.executeToolCall(toolCall);
-      if (result) {
-        messages.push({ role: "user", content: result });
-        this.log('INFO', 'Tool result added to messages');
-
-        const stream = await this.anthropic.messages.stream({
-          model: this.getCurrentModel(),
-          max_tokens: 1000,
-          messages,
-        });
-
-        for await (const chunk of stream) {
-          if (chunk.type === 'content_block_start' || chunk.type === 'content_block_delta') {
-            if (chunk.delta?.text) {
-              yield chunk.delta.text;
-            }
-          }
-        }
+  private resetContext(options?: QueryOptions) {
+    this.context = {
+      messages: [],
+      options: options || {
+        temperature: 0.7,
+        maxTokens: 2000
       }
-    } catch (error) {
-      this.logError(`Error executing tool ${toolCall.name}`, error);
-      yield `\nError executing tool ${toolCall.name}: ${error}\n`;
-    }
+    };
   }
 
-  async *processQueryStream(query: string): AsyncGenerator<string> {
-    this.log('INFO', 'Processing query:', query);
-    const messages: StreamMessage[] = [{ role: "user", content: query }];
-    const allTools = Array.from(this.serverConnections.values())
-      .flatMap(conn => conn.tools);
+  async *startQuery(query: string, options?: QueryOptions): AsyncGenerator<QueryResponse> {
+    // this.resetContext(options);
+    this.context.messages.push({ type: 'text', content: query });
 
-    this.log('DEBUG', 'Available tools:', allTools.map(t => t.name));
-
-    const stream = await this.anthropic.messages.stream({
-      model: this.getCurrentModel(),
-      max_tokens: 1000,
-      messages,
-      tools: allTools,
-    });
-
-    let pendingToolCall: ToolCall | null = null;
-
-    for await (const chunk of stream) {
-      this.log('DEBUG', 'Received chunk:', chunk);
-
-      if (chunk.type === 'content_block_start') {
-        if (chunk.content_block.type === 'tool_use') {
-          pendingToolCall = {
-            name: chunk.content_block.name,
-            args: chunk.content_block.input || {},
-            jsonInput: ''
-          };
-          this.log('TOOL', 'Starting tool call:', pendingToolCall);
-        } else if (chunk.delta?.text) {
-          yield chunk.delta.text;
+    let continueQuery: boolean;
+    do {
+      logger.info('Starting query', { context: this.context });
+      continueQuery = false;
+      const stream = this.provider.startQuery(this.context);
+      for await (const message of stream) {
+        switch (message.type) {
+          case 'text':
+            yield message;
+            break;
+          case 'tool_use':
+            logger.info('Tool use message received', { message });
+            yield {
+              type: 'tool_start',
+              toolName: message.content.name,
+              args: JSON.stringify(message.content.args, null, 2)
+            };
+            this.context.messages.push({
+              type: 'tool_use',
+              id: message.content.id,
+              name: message.content.name,
+              input: JSON.stringify(message.content.args, null, 2)
+            });
+            const toolResponse = await this.handleToolCall(message);
+            continueQuery = toolResponse.type !== 'tool_error';
+            yield toolResponse;
+            break;
+          default:
+            break;
         }
-      } else if (chunk.type === 'content_block_delta') {
-        if (chunk.delta?.text) {
-          yield chunk.delta.text;
-        }
-        if (pendingToolCall) {
-          await this.processJsonDelta(pendingToolCall, chunk.delta);
-          if (chunk.delta?.type === 'input_json_delta') {
-            this.log('DATA', 'Accumulated JSON delta:', chunk.delta.partial_json);
-          }
-        }
-      } else if (chunk.type === 'content_block_stop' && pendingToolCall) {
-        if (pendingToolCall.jsonInput) {
-          try {
-            pendingToolCall.args = JSON.parse(pendingToolCall.jsonInput);
-            this.log('SUCCESS', 'Parsed tool arguments:', pendingToolCall.args);
-          } catch (e) {
-            this.logError('Failed to parse tool JSON input', e);
-          }
-        }
-
-        for await (const text of this.handleToolCall(pendingToolCall, messages)) {
-          yield text;
-        }
-        this.log('SUCCESS', 'Tool call completed:', pendingToolCall.name);
-        pendingToolCall = null;
       }
+      logger.info('Query completed');
+    } while (continueQuery);
+  }
+
+  async handleToolCall(toolUseResponse: ToolUseResponse): Promise<ToolResultQueryResponse | ToolErrorQueryResponse> {
+    try {
+      logger.info('Handling tool call', { toolUseResponse });
+      const result = await this.executeToolCall(toolUseResponse.content.name, toolUseResponse.content.args);
+
+      this.context.messages.push({
+        type: 'tool_result',
+        tool_use_id: toolUseResponse.content.id,
+        content: result.content || 'No result'
+      });
+
+      logger.info('Tool result', { result });
+
+      if (result.content.length == 1) {
+        const content = result.content[0];
+        switch (content.type) {
+          case 'text':
+            return {
+              type: 'tool_result',
+              toolName: toolUseResponse.content.name,
+              result: content.text || 'No result'
+            };
+          default:
+            return {
+              type: 'tool_result',
+              toolName: toolUseResponse.content.name,
+              result: content || 'No result'
+            };
+        }
+      }
+      else {
+        return {
+          type: 'tool_result',
+          toolName: toolUseResponse.content.name,
+          result: result.content || 'No result'
+        };
+      }
+    } catch (error) {
+      return {
+        type: 'tool_error',
+        toolName: toolUseResponse.content.name,
+        error: (error as Error).message || 'Unknown error'
+      };
     }
   }
 
   async cleanup(): Promise<void> {
-    this.log('INFO', 'Cleaning up connections...');
-    for (const connection of this.serverConnections.values()) {
-      await connection.client.close();
+    try {
+      // 모델 제공자 정리
+      await this.provider.cleanup();
+
+      // MCP 서버 연결 정리
+      for (const connection of this.serverConnections.values()) {
+        try {
+          await connection.client.close();
+          logger.info(`Closed connection to ${connection.name}`);
+        } catch (error) {
+          logger.error(`Error closing connection to ${connection.name}`, { error });
+        }
+      }
+      this.serverConnections.clear();
+
+      logger.info('MCP client cleaned up');
+    } catch (error) {
+      logger.error('Failed to cleanup MCP client', { error });
+      throw error;
     }
-    this.serverConnections.clear();
-    this.log('SUCCESS', 'All connections closed');
+  }
+
+  async stopQuery(): Promise<void> {
+    try {
+      await this.provider.stopQuery();
+      logger.info('Stream stopped successfully');
+    } catch (error) {
+      logger.error('Failed to stop stream', { error });
+      throw error;
+    }
   }
 }
